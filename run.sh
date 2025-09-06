@@ -20,10 +20,11 @@ cmake ..
 
 echo "Building project..."
 make
-
+if [ $? -ne 0 ]; then
+    echo "Build failed. Exiting."
+    exit 1
+fi
 echo "Returning to project root..."
 cd ..
 
-echo "--- Build complete. Running executable: $EXECUTABLE_NAME ---"
-echo ""
-./"$EXECUTABLE_NAME"
+echo "--- Build complete. You can now run the executable: $EXECUTABLE_NAME"

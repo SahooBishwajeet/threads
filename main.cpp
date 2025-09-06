@@ -15,6 +15,7 @@ const int MIN_DISTANCE = 30;  // Minimum distance between pins to avoid short li
 const int MAX_LINES = 3500;   // Maximum number of lines to draw
 const int LINE_WEIGHT = 30;   // Weight to reduce error along drawn lines
 const int SCALE_FACTOR = 4;   // Scale factor for output image
+const int MAX_FRAMES = 50;    // Maximum frames for animation
 
 struct Coord {
     double x;
@@ -167,15 +168,83 @@ class StringArtGenerator {
 
         cv::imwrite(outputPath, result);
     }
+
+    void saveSequenceToFile(const vector<int>& sequence, const string& filePath) {
+        ofstream outFile(filePath);
+        if (!outFile) {
+            throw runtime_error("Error: Could not create sequence file.");
+        }
+
+        for (size_t i = 0; i < sequence.size(); ++i) {
+            outFile << sequence[i];
+            if (i < sequence.size() - 1) {
+                outFile << ",";
+            }
+        }
+    }
+
+    void saveAnimation(const vector<int>& sequence, const string& outputPath) {
+        cv::Mat result =
+            cv::Mat::ones(imgSize * SCALE_FACTOR, imgSize * SCALE_FACTOR, CV_8UC1) * 255;
+
+        int frameCount = 0;
+        int frameStep = max(1, static_cast<int>(sequence.size() / MAX_FRAMES));
+
+        string baseName = outputPath.substr(0, outputPath.find_last_of("."));
+        string videoPath = baseName + "_animation.avi";
+
+        int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');  // .avi with MJPEG codec
+        double fps = 30.0;
+        cv::Size frameSize(result.cols, result.rows);
+
+        cv::VideoWriter writer(videoPath, codec, fps, frameSize, false);  // false = grayscale
+
+        if (!writer.isOpened()) {
+            cerr << "Error: Could not open the video file for writing." << endl;
+            return;
+        }
+
+        for (size_t i = 1; i < sequence.size(); i++) {
+            int startPin = sequence[i - 1];
+            int endPin = sequence[i];
+
+            cv::Point start(static_cast<int>(pinCoords[startPin].x * SCALE_FACTOR),
+                            static_cast<int>(pinCoords[startPin].y * SCALE_FACTOR));
+            cv::Point end(static_cast<int>(pinCoords[endPin].x * SCALE_FACTOR),
+                          static_cast<int>(pinCoords[endPin].y * SCALE_FACTOR));
+
+            cv::line(result, start, end, cv::Scalar(0), 1, cv::LINE_AA);
+
+            if (i % frameStep == 0 || i == sequence.size() - 1) {
+                writer.write(result);
+                frameCount++;
+            }
+        }
+
+        writer.release();
+        cout << "Animation video saved to: " << videoPath << endl;
+    }
 };
 
 int main(int argc, char** argv) {
-    if (argc != 3) {
-        cout << "Usage: " << argv[0] << " <input_image> <output_image>" << endl;
+    if (argc < 3 || argc > 5) {
+        cout << "Usage: " << argv[0] << " <input_image> <output_image> [sequence_file] [-a]" << endl;
+        cout << "Options:" << endl;
+        cout << "  sequence_file  : Optional file to save the pin sequence" << endl;
+        cout << "  -a             : Generate animation frames" << endl;
         return -1;
-    } else {
-        cout << "Input Image: " << argv[1] << endl;
-        cout << "Output Image: " << argv[2] << endl;
+    }
+
+    bool generateAnimation = false;
+    string sequenceFile;
+
+    for (int i = 3; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "-a") {
+            generateAnimation = true;
+        } else {
+            sequenceFile = arg;
+        }
     }
 
     try {
@@ -183,6 +252,14 @@ int main(int argc, char** argv) {
         vector<int> sequence = generator.generateStringArt();
         generator.saveResult(sequence, argv[2]);
 
+        if (!sequenceFile.empty()) {
+            generator.saveSequenceToFile(sequence, sequenceFile);
+            cout << "Sequence saved to: " << sequenceFile << endl;
+        }
+
+        if (generateAnimation) {
+            generator.saveAnimation(sequence, argv[2]);
+        }
         cout << "String art generated successfully!" << endl;
     } catch (const exception& e) {
         cerr << e.what() << endl;
