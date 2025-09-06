@@ -10,6 +10,21 @@ A C++ program that converts images into string art by simulating thread connecti
 - Creates animation of the string art generation process
 - Saves pin sequence for reproducibility
 
+## Demo
+
+<div style="display: flex; gap: 20px; margin-top: 20px;">
+  <div style="text-align: center;">
+    <img src="assets/input.png" alt="Input Image" style="max-width: 100%; height: auto;">
+    <p><strong>Input</strong></p>
+  </div>
+  <div style="text-align: center;">
+    <img src="assets/output.png" alt="Output Image" style="max-width: 100%; height: auto;">
+    <p><strong>Output</strong></p>
+  </div>
+</div>
+
+![String Art Animation](assets/output.gif)
+
 ## Prerequisites
 
 - C++ compiler with C++17 support
